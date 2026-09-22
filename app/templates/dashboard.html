@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Officer Dashboard | Grievance Radar{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--primary-color);">Officer Review Dashboard</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Human-in-the-loop validation: Confirm, dismiss, or refine automated statistical anomalies before inclusion in the Monday Brief.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('brief.preview') }}" class="btn btn-primary" style="padding: 0.65rem 1.25rem;">
+      Review &amp; Generate Brief &rarr;
+    </a>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <!-- Sidebar Stats & Quick Filters -->
+  <aside>
+    <div class="card" style="padding: 1.25rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-color);">Review Summary</h3>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          <span style="color: var(--text-muted);">Total Complaints:</span>
+          <strong>{{ total_complaints }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          <span style="color: var(--text-muted);">Topic Clusters:</span>
+          <strong>{{ cluster_count }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          <span style="color: var(--accent-red); font-weight: 600;">Pending Review:</span>
+          <span class="badge badge-critical" id="pendingCounter">{{ pending_count }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+          <span style="color: var(--accent-green); font-weight: 600;">Confirmed:</span>
+          <span class="badge badge-success" id="confirmedCounter">{{ confirmed_count }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Dismissed:</span>
+          <span class="badge" id="dismissedCounter" style="background:#f1f5f9; color:#475569;">{{ dismissed_count }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem; font-size: 0.85rem; color: var(--text-muted);">
+      <h4 style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Spike Detection Criteria</h4>
+      <p>• Baseline: 4-week rolling mean &amp; standard deviation</p>
+      <p style="margin-top: 0.25rem;">• Z-score &ge; +2.5&sigma; from baseline</p>
+      <p style="margin-top: 0.25rem;">• Relative increase &ge; +50%</p>
+    </div>
+  </aside>
+
+  <!-- Main Finding Cards -->
+  <section id="findingsContainer">
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Flagged Critical Surges for Officer Decision</h2>
+
+    {% if pending_findings %}
+      {% for finding in pending_findings %}
+        <div class="card finding-card {% if finding.z_score > 3.0 %}critical{% else %}warning{% endif %}" id="card-{{ finding.id }}">
+          <div class="finding-header">
+            <div>
+              <span class="badge {% if finding.z_score > 3.0 %}badge-critical{% else %}badge-warning{% endif %}">
+                {% if finding.z_score > 3.0 %}CRITICAL SURGE{% else %}ELEVATED SPIKE{% endif %}
+              </span>
+              <h3 id="title-display-{{ finding.id }}" style="font-size: 1.2rem; font-weight: 700; margin-top: 0.4rem; color: var(--primary-color);">
+                {{ finding.title }}
+              </h3>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 1.3rem; font-weight: 800; color: {% if finding.z_score > 3.0 %}var(--accent-red){% else %}var(--accent-amber){% endif %};">
+                +{{ finding.z_score | round(1) }}&sigma;
+              </span>
+            </div>
+          </div>
+
+          <!-- Metrics summary -->
+          <div class="finding-metrics">
+            <div>Surge Rate: <strong>+{{ finding.percent_change | round(1) }}%</strong></div>
+            <div>Affected Volume: <strong>{{ finding.affected_count }} grievances</strong></div>
+            <div>Wards: <strong>{{ finding.get_wards() | join(', ') }}</strong></div>
+            <div>Target Dept: <strong id="dept-display-{{ finding.id }}">{{ finding.suggested_dept }}</strong></div>
+          </div>
+
+          <!-- Sample Quote Excerpt -->
+          {% set samples = finding.get_sample_texts() %}
+          {% if samples %}
+            <div class="excerpt-block">
+              &ldquo;{{ samples[0] | truncate(120) }}&rdquo;
+            </div>
+          {% endif %}
+
+          <!-- Inline Edit Fields (hidden by default) -->
+          <div id="edit-form-{{ finding.id }}" style="display: none; background: #fffdf5; border: 1px dashed var(--accent-amber); padding: 0.85rem; border-radius: var(--radius-sm); margin: 0.75rem 0;">
+            <div style="margin-bottom: 0.5rem;">
+              <label style="display: block; font-size: 0.8rem; font-weight: 600;">Custom Title for Brief:</label>
+              <input type="text" id="edit-title-{{ finding.id }}" value="{{ finding.title }}" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            </div>
+            <div style="margin-bottom: 0.5rem;">
+              <label style="display: block; font-size: 0.8rem; font-weight: 600;">Target Action Department:</label>
+              <input type="text" id="edit-dept-{{ finding.id }}" value="{{ finding.suggested_dept }}" style="width: 100%; padding: 0.4rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            </div>
+            <button class="btn btn-confirm" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;" onclick="saveEditAndConfirm({{ finding.id }})">Save &amp; Confirm</button>
+            <button class="btn" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; background: #f1f5f9;" onclick="toggleEditMode({{ finding.id }})">Cancel</button>
+          </div>
+
+          <!-- Human-in-the-loop Action Buttons -->
+          <div class="action-row" id="actions-{{ finding.id }}">
+            <button class="btn btn-confirm" onclick="applyDecision({{ finding.id }}, 'confirm')">
+              &#x2705; Confirm for Brief
+            </button>
+            <button class="btn btn-dismiss" onclick="applyDecision({{ finding.id }}, 'dismiss')">
+              &#x274C; Dismiss Finding
+            </button>
+            <button class="btn btn-edit" onclick="toggleEditMode({{ finding.id }})">
+              &#x270F;&#xFE0F; Refine / Edit
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+        <h3 style="color: var(--accent-green); margin-bottom: 0.5rem;">No Pending Findings</h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">All automated anomalies have been processed, or no spikes currently exceed threshold criteria.</p>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary" style="margin-top: 1rem;">Back to Data Ingest</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

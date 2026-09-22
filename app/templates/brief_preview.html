@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Monday Brief Preview | Grievance Radar{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--primary-color);">Executive Monday Brief</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">One officer, one page, every week. Only human-confirmed statistical anomalies are rendered onto the executive brief.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <button id="generatePdfBtn" class="btn btn-primary" style="padding: 0.65rem 1.25rem;">
+      &darr; Generate &amp; Download PDF
+    </button>
+  </div>
+</div>
+
+<!-- Brief Paper Simulator Card -->
+<div class="card" style="max-width: 800px; margin: 0 auto; padding: 2.5rem; border: 1px solid #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); background: #ffffff;">
+  <!-- Brief Header -->
+  <div style="border-bottom: 2px solid var(--primary-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--primary-color); letter-spacing: -0.02em;">GRIEVANCE RADAR &mdash; MONDAY BRIEF</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+          SRM Institute of Science &amp; Technology &bull; YUVA Megathon 2026 &bull; <strong>Human-Confirmed Findings Only</strong>
+        </p>
+      </div>
+      <div style="text-align: right; font-size: 0.85rem; color: var(--text-muted);">
+        <strong>Weekly Briefing</strong><br/>
+        Cycle: Active Period
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmed Findings Section -->
+  <div id="briefFindingsContent">
+    {% if confirmed_findings %}
+      {% for finding in confirmed_findings %}
+        <div style="margin-bottom: 1.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">
+              #{{ loop.index }}. {{ finding.title }}
+            </h3>
+            <span class="badge {% if finding.z_score > 3.0 %}badge-critical{% else %}badge-warning{% endif %}">
+              +{{ finding.z_score | round(1) }}&sigma; Surge
+            </span>
+          </div>
+
+          <div style="font-size: 0.85rem; margin-bottom: 0.4rem; color: #334155;">
+            &bull; <strong>Statistical Anomaly:</strong> Z-Score = <strong>+{{ finding.z_score | round(1) }}&sigma;</strong> | 
+            Relative Increase = <strong>+{{ finding.percent_change | round(1) }}%</strong> | 
+            Affected Complaints = <strong>{{ finding.affected_count }}</strong>
+          </div>
+
+          <div style="font-size: 0.85rem; margin-bottom: 0.4rem; color: #334155;">
+            &bull; <strong>Affected Wards:</strong> {{ finding.get_wards() | join(', ') }} | 
+            <strong>Suggested Department:</strong> <u>{{ finding.suggested_dept }}</u>
+          </div>
+
+          {% set samples = finding.get_sample_texts() %}
+          {% if samples %}
+            <div style="font-size: 0.8rem; font-style: italic; color: #64748b; background: #f8fafc; padding: 0.5rem 0.75rem; border-left: 2px solid var(--primary-color); border-radius: 0 4px 4px 0; margin-top: 0.5rem;">
+              Citizen Voice: &ldquo;{{ samples[0] | truncate(110) }}&rdquo;
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+        <p style="font-size: 1rem; font-weight: 600;">No Confirmed Findings Selected</p>
+        <p style="font-size: 0.85rem; margin-top: 0.4rem;">
+          Go to the <a href="{{ url_for('officer.dashboard') }}" style="color: var(--primary-color);">Officer Dashboard</a> to review and confirm pending statistical anomalies.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Brief Footer -->
+  <div style="border-top: 1px solid var(--primary-color); padding-top: 1rem; margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+    Grievance Radar &bull; One officer, one page, every week. &bull; Tamper-evident Audit Verified
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('generatePdfBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('generatePdfBtn');
+  btn.disabled = true;
+  btn.innerText = 'Compiling PDF...';
+
+  try {
+    const res = await fetch('/api/brief', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.download_url) {
+      window.location.href = data.download_url;
+    } else {
+      alert(data.error || 'Failed to generate brief. Please ensure at least one finding is confirmed.');
+    }
+  } catch (err) {
+    alert('Network or server error during PDF generation.');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '↓ Generate & Download PDF';
+  }
+});
+</script>
+{% endblock %}

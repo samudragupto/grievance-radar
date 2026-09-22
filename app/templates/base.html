@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Grievance Radar{% endblock %}</title>
+  
+  <!-- Typography & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js 4.x CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Leaflet 1.9.x CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="{{ url_for('main.index') }}" class="brand">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" class="brand-logo">
+        <span class="brand-title">Grievance Radar</span>
+      </a>
+      <nav class="nav-links">
+        <a href="{{ url_for('main.index') }}">Home &amp; Ingest</a>
+        <a href="{{ url_for('officer.dashboard') }}">Officer Dashboard</a>
+        <a href="{{ url_for('main.trends') }}">Public Trends</a>
+        <a href="{{ url_for('main.clusters') }}">Topic Clusters</a>
+        <a href="{{ url_for('brief.preview') }}">Monday Brief</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p><strong>Grievance Radar</strong> &bull; SRM Institute of Science &amp; Technology, Tiruchirappalli &bull; YUVA Megathon 2026</p>
+    <p style="margin-top: 0.25rem; font-size: 0.8rem; color: #94a3b8;">Human-in-the-loop municipal intelligence &bull; One officer, one page, every week.</p>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,32 @@
+name: CD
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Option A: Deploy to Render (Default active hook)
+      - name: Trigger Render Deploy Hook
+        if: env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          echo "Triggering automated build and deploy on Render..."
+          curl -s -X POST "$RENDER_DEPLOY_HOOK"
+
+      # Option B: Deploy to PythonAnywhere (Alternative option)
+      # - name: Deploy to PythonAnywhere
+      #   env:
+      #     PA_USERNAME: ${{ secrets.PYTHONANYWHERE_USERNAME }}
+      #     PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
+      #     PA_DOMAIN: ${{ secrets.PYTHONANYWHERE_DOMAIN }}
+      #   run: |
+      #     curl -X POST "https://www.pythonanywhere.com/api/v0/user/${PA_USERNAME}/webapps/${PA_DOMAIN}/reload/" \
+      #       -H "Authorization: Token ${PA_API_TOKEN}"

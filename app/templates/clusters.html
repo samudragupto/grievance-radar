@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Semantic Clusters | Grievance Radar{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--primary-color);">Grievance Topic Clusters</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Unsupervised semantic topic modeling (BERTopic with K-Means &amp; TF-IDF fallback) automatically groupings thousands of citizen submissions into topical clusters.</p>
+</div>
+
+<div class="card">
+  <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-color);">Discovered Clusters Overview</h3>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;" id="clustersGrid">
+    {% if clusters %}
+      {% for cluster in clusters %}
+        <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; background: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span class="badge" style="background: var(--primary-light); color: var(--primary-color);">Cluster #{{ cluster.id }}</span>
+            <strong style="color: var(--primary-color);">{{ cluster.count }} complaints</strong>
+          </div>
+          <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">
+            {{ cluster.label }}
+          </h4>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Avg Spike Z-Score: {{ cluster.avg_zscore | round(2) }}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.9rem;">No clusters computed yet. Run the analytics pipeline from the home page to discover clusters.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/clusters.js') }}"></script>
+{% endblock %}

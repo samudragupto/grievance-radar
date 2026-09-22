@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Public Analytics &amp; Trends | Grievance Radar{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--primary-color);">Public Anonymized Trends</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">High-level complaint distribution and geospatial density. In strict compliance with citizen privacy, all individual grievance texts and personal identifiers are omitted.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+  <!-- Weekly Department Volume -->
+  <div class="card">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-color);">Weekly Complaint Volume by Top Departments</h3>
+    <div class="chart-container">
+      <canvas id="trendLineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Ward Volume Bar Chart -->
+  <div class="card">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-color);">Complaints by Municipal Ward</h3>
+    <div class="chart-container">
+      <canvas id="wardBarChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Geospatial Leaflet Map -->
+<div class="card">
+  <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--primary-color);">Municipal Ward Geospatial Concentration</h3>
+  <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Interactive OpenStreetMap visualization displaying complaint intensity markers across municipal zones.</p>
+  <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/trends.js') }}"></script>
+{% endblock %}
