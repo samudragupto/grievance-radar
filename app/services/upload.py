@@ -1,10 +1,11 @@
 # File upload handling and validation service.
 
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict, List
+
 from werkzeug.utils import secure_filename
+
 from app.services.preprocess import load_and_anonymize
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 ALLOWED_EXTENSIONS = {".csv", ".json"}
 
 
-def save_and_parse_upload(file_storage, target_dir: str = "instance/uploads") -> List[Dict[str, Any]]:
+def save_and_parse_upload(
+    file_storage, target_dir: str = "instance/uploads"
+) -> List[Dict[str, Any]]:
     """Save an incoming uploaded file, validate format, and parse records.
 
     Args:

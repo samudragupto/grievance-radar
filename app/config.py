@@ -17,9 +17,7 @@ class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "grievance-radar-default-secret-key-2026")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CLUSTERING_ALGO = os.getenv("CLUSTERING_ALGO", "bertopic").lower()
-    EMBEDDING_MODEL = os.getenv(
-        "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
-    )
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     ZSCORE_THRESHOLD = float(os.getenv("ZSCORE_THRESHOLD", "2.5"))
     PERCENT_CHANGE_THRESHOLD = float(os.getenv("PERCENT_CHANGE_THRESHOLD", "50.0"))
     ROLLING_WEEKS = int(os.getenv("ROLLING_WEEKS", "4"))

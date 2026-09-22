@@ -1,8 +1,19 @@
 # Unit tests for embedding generation.
 
+import importlib.util
+
 import numpy as np
 import pytest
+
 from app.services.embed import generate_embeddings
+
+# Semantic-quality assertions only hold for the real transformer model; the
+# offline fallback is a bag-of-words hash and carries no semantic signal.
+REAL_MODEL_AVAILABLE = importlib.util.find_spec("sentence_transformers") is not None
+requires_real_model = pytest.mark.skipif(
+    not REAL_MODEL_AVAILABLE,
+    reason="sentence-transformers is not installed; the fallback encoder is not semantic",
+)
 
 
 def test_generate_embeddings_shape():
@@ -33,6 +44,7 @@ def test_identical_texts_produce_identical_embeddings():
     np.testing.assert_allclose(emb[0], emb[1], rtol=1e-5, atol=1e-5)
 
 
+@requires_real_model
 def test_similar_texts_have_higher_cosine_similarity():
     """Verify semantically similar sentences have higher cosine similarity than unrelated ones."""
     t_base = "Water supply is not reaching our houses since 3 days."

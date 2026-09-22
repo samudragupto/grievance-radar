@@ -3,8 +3,8 @@
 import argparse
 import json
 import logging
-from pathlib import Path
 import time
+
 from app import create_app
 from app.database import db
 from app.models import Cluster, Complaint, Finding
@@ -31,7 +31,7 @@ def run(input_path: str):
         # Step 1: Load and Anonymize
         start_time = time.time()
         records = load_and_anonymize(input_path)
-        logger.info("Loaded %d complaints", len(records))
+        logger.info("Loaded %d complaints in %.1fs", len(records), time.time() - start_time)
 
         # Clear existing DB data
         Complaint.query.delete()
@@ -41,6 +41,7 @@ def run(input_path: str):
 
         for item in records:
             from datetime import datetime
+
             c = Complaint(
                 text=item["text"],
                 category=item.get("category"),
@@ -107,7 +108,13 @@ def run(input_path: str):
                 status="pending",
             )
             db.session.add(finding_rec)
-            logger.info("  [%d] %s | Z-score: +%.1fσ | Affected: %d complaints", idx, f["title"], f["z_score"], f["affected_count"])
+            logger.info(
+                "  [%d] %s | Z-score: +%.1fσ | Affected: %d complaints",
+                idx,
+                f["title"],
+                f["z_score"],
+                f["affected_count"],
+            )
 
         db.session.commit()
         logger.info("Results successfully saved to SQLite database.")
@@ -115,6 +122,11 @@ def run(input_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Grievance Radar analytics pipeline.")
-    parser.add_argument("--input", type=str, default="data/sample_complaints.json", help="Path to input complaints file.")
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="data/sample_complaints.json",
+        help="Path to input complaints file.",
+    )
     args = parser.parse_args()
     run(args.input)

@@ -1,0 +1,6 @@
+# Pinned lint/format tooling used by the CI lint job and `make lint`.
+# Kept separate from requirements-dev.txt so the lint job stays fast: it does
+# not need to pull torch / sentence-transformers just to check formatting.
+black==24.8.0
+flake8==7.1.1
+isort==5.13.2

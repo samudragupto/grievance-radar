@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-import pytest
+
 from app.services.brief_generator import generate_brief_pdf
 
 

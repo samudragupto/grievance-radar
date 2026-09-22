@@ -2,6 +2,10 @@
 
 > One officer, one page, every week.
 
+[![CI](https://github.com/samudragupto/grievance-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/samudragupto/grievance-radar/actions/workflows/ci.yml)
+[![CD](https://github.com/samudragupto/grievance-radar/actions/workflows/cd.yml/badge.svg)](https://github.com/samudragupto/grievance-radar/actions/workflows/cd.yml)
+[![CodeQL](https://github.com/samudragupto/grievance-radar/actions/workflows/codeql.yml/badge.svg)](https://github.com/samudragupto/grievance-radar/actions/workflows/codeql.yml)
+
 Grievance Radar is an analytics platform for municipal administrators that turns high-volume citizen grievance feeds into actionable weekly decisions. The system ingests complaint data, redacts citizen PII, clusters complaints using dense semantic embeddings, flags statistical anomalies against rolling historical baselines, and generates an executive one-page "Monday Brief" PDF. A strict human-in-the-loop validation step requires municipal officers to confirm, dismiss, or refine automated findings before any anomaly enters the official brief.
 
 ## Screenshots
@@ -64,12 +68,44 @@ Demo data in `data/` consists of 1,200 synthetic complaints modeled on CPGRAMS /
 ## Development & Testing
 
 ```bash
+# Install dev tooling (pytest, coverage, linting)
+make install-dev
+
 # Run pytest test suite with coverage
 make test
 
-# Code formatting and linting
+# Code formatting and linting (identical to what CI enforces)
 make format
 make lint
+
+# Boot the app and verify the key routes respond
+make smoke
+
+# Optional: auto-run the linters on every commit
+pip install pre-commit && pre-commit install
+```
+
+## CI/CD
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | PRs into `main`, manual (`workflow_dispatch`), reusable (`workflow_call`) | Lint (`black`, `isort`, `flake8`) + pytest with coverage + in-process smoke test of the WSGI app |
+| `cd.yml` | Pushes to `main` | Runs CI as a gate, builds the container image, smoke-tests it over HTTP (`/health`), then fires the Render deploy hook |
+| `codeql.yml` | Pushes/PRs to `main`, weekly schedule | CodeQL static analysis for Python |
+
+Notes:
+
+- The lint job installs only [`requirements-lint.txt`](requirements-lint.txt), so it finishes in seconds instead of pulling the full ML stack.
+- The `sentence-transformers` model is cached in `~/.cache/huggingface`; the cache key includes `hashFiles('requirements*.txt')` so a dependency bump invalidates it.
+- `GET /health` is the liveness probe used by the container `HEALTHCHECK`, the compose healthcheck, and the CD smoke test.
+- If `RENDER_DEPLOY_HOOK` is not configured, CD logs a warning and skips the deploy instead of reporting a misleading green run.
+- To deploy, add these repository secrets under **Settings -> Secrets and variables -> Actions**: `RENDER_DEPLOY_HOOK` (Render), or `PYTHONANYWHERE_USERNAME` / `PYTHONANYWHERE_API_TOKEN` / `PYTHONANYWHERE_DOMAIN` and enable the `deploy_pythonanywhere` job.
+
+Docker:
+
+```bash
+make docker-build          # build grievance-radar:local
+SECRET_KEY=... make docker-up   # start the stack (SECRET_KEY is required)
 ```
 
 ## Credits & Hackathon

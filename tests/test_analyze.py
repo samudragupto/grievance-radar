@@ -1,7 +1,5 @@
 # Unit tests for baseline analysis and statistical spike detection.
 
-from datetime import datetime, timedelta
-import pytest
 from app.services.analyze import compute_rolling_baseline, detect_spikes, rank_findings
 
 

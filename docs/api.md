@@ -104,3 +104,17 @@ Base URL: `/api`
     "ward_geo": [{"ward": "Ward 4", "count": 142, "lat": 10.835, "lng": 78.705}]
   }
   ```
+
+### 8. Health Probe
+- **Endpoint**: `GET /health`
+- **Description**: Liveness/readiness probe used by the container `HEALTHCHECK`, the compose healthcheck and the CD smoke test. Returns `503` if the database is unreachable. Exposes counts only — never complaint text.
+- **Response**:
+  ```json
+  {
+    "status": "ok",
+    "complaints": 1200,
+    "clusters": 14,
+    "pending_findings": 3,
+    "briefs": 1
+  }
+  ```

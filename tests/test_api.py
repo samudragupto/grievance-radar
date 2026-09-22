@@ -2,7 +2,7 @@
 
 import io
 import json
-import pytest
+
 from app.models import Complaint
 
 
@@ -27,6 +27,7 @@ def test_api_pipeline_triggers_and_returns(client, db, app):
     # Seed complaints first
     with app.app_context():
         from datetime import datetime
+
         for i in range(25):
             c = Complaint(
                 text=f"Water leakage problem #{i} in sector",
@@ -56,6 +57,7 @@ def test_api_trends_aggregated_and_no_pii(client, app, db):
     """Verify /api/trends returns aggregated analytics with zero raw complaint texts."""
     with app.app_context():
         from datetime import datetime
+
         c = Complaint(
             text="Sensitive citizen personal info here that should not leak",
             ward="Ward 1",

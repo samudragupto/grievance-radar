@@ -1,7 +1,5 @@
 # Unit tests for clustering services.
 
-import numpy as np
-import pytest
 from app.services.cluster import cluster_complaints
 from app.services.embed import generate_embeddings
 

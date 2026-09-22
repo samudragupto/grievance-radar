@@ -1,7 +1,9 @@
 # Embedding generation using sentence-transformers.
 
+import hashlib
 import logging
 from typing import List, Optional
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -79,7 +81,11 @@ def generate_embeddings(
         vec = np.zeros(384, dtype=np.float32)
         words = text.lower().split()
         for w in words:
-            idx = abs(hash(w)) % 384
+            # blake2b (not the builtin hash()) so the fallback is stable across
+            # processes: Python string hashing is salted per-process unless
+            # PYTHONHASHSEED is pinned, which made test runs non-reproducible.
+            digest = hashlib.blake2b(w.encode("utf-8"), digest_size=4).digest()
+            idx = int.from_bytes(digest, "big") % 384
             vec[idx] += 1.0
         norm = np.linalg.norm(vec)
         if norm > 0:

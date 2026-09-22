@@ -1,10 +1,12 @@
 # REST API endpoints for upload, pipeline orchestration, clusters, findings, and trends.
 
-from datetime import datetime
 import json
 import logging
-from flask import Blueprint, current_app, jsonify, request
+from datetime import datetime
+
 import pandas as pd
+from flask import Blueprint, current_app, jsonify, request
+
 from app.database import db
 from app.models import Brief, Cluster, Complaint, Finding
 from app.services.analyze import compute_rolling_baseline, detect_spikes, rank_findings
@@ -130,12 +132,14 @@ def trigger_pipeline():
 
     db.session.commit()
 
-    return jsonify({
-        "success": True,
-        "clusters_found": len(cluster_results.get("clusters", [])),
-        "spikes_detected": len(spikes),
-        "top_findings": [f.to_dict() for f in saved_findings],
-    })
+    return jsonify(
+        {
+            "success": True,
+            "clusters_found": len(cluster_results.get("clusters", [])),
+            "spikes_detected": len(spikes),
+            "top_findings": [f.to_dict() for f in saved_findings],
+        }
+    )
 
 
 @api_bp.route("/clusters", methods=["GET"])
@@ -182,12 +186,14 @@ def generate_brief():
     db.session.add(brief_rec)
     db.session.commit()
 
-    return jsonify({
-        "success": True,
-        "brief_id": brief_rec.id,
-        "week_label": week_label,
-        "download_url": f"/brief/download/{brief_rec.id}",
-    })
+    return jsonify(
+        {
+            "success": True,
+            "brief_id": brief_rec.id,
+            "week_label": week_label,
+            "download_url": f"/brief/download/{brief_rec.id}",
+        }
+    )
 
 
 @api_bp.route("/trends", methods=["GET"])
@@ -195,12 +201,14 @@ def get_trends():
     """Return anonymized aggregated statistics for public trends (no PII, no raw text)."""
     complaints = Complaint.query.all()
     if not complaints:
-        return jsonify({
-            "weekly_categories": [],
-            "ward_counts": [],
-            "top_categories": [],
-            "ward_coordinates": [],
-        })
+        return jsonify(
+            {
+                "weekly_categories": [],
+                "ward_counts": [],
+                "top_categories": [],
+                "ward_coordinates": [],
+            }
+        )
 
     data = [
         {
@@ -249,16 +257,20 @@ def get_trends():
         w_name = r["ward"]
         cnt = int(r["count"])
         lat_lon = coords_map.get(w_name, [10.8250, 78.6900])
-        ward_geo.append({
-            "ward": w_name,
-            "count": cnt,
-            "lat": lat_lon[0],
-            "lng": lat_lon[1],
-        })
+        ward_geo.append(
+            {
+                "ward": w_name,
+                "count": cnt,
+                "lat": lat_lon[0],
+                "lng": lat_lon[1],
+            }
+        )
 
-    return jsonify({
-        "weeks": weekly_cat["week"].tolist() if "week" in weekly_cat else [],
-        "categories": {col: weekly_cat[col].tolist() for col in top_depts if col in weekly_cat},
-        "ward_counts": ward_counts.to_dict(orient="records"),
-        "ward_geo": ward_geo,
-    })
+    return jsonify(
+        {
+            "weeks": weekly_cat["week"].tolist() if "week" in weekly_cat else [],
+            "categories": {col: weekly_cat[col].tolist() for col in top_depts if col in weekly_cat},
+            "ward_counts": ward_counts.to_dict(orient="records"),
+            "ward_geo": ward_geo,
+        }
+    )
