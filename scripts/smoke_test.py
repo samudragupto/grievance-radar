@@ -19,14 +19,15 @@ EXPECTED_ROUTES = ["/health", "/", "/trends", "/clusters", "/officer/dashboard"]
 
 
 def check_in_process() -> int:
-    """Run the smoke checks against the in-process test client."""
+    """Run the smoke checks against the in-process test client.
+
+    Deliberately does NOT call `db.create_all()` itself: the app factory must
+    create the schema on boot (that is all a gunicorn worker does), so calling
+    it here would hide bootstrap regressions from the pipeline.
+    """
     from app import create_app
-    from app.database import db
 
     app = create_app("testing")
-    with app.app_context():
-        db.create_all()
-
     client = app.test_client()
     failures = []
     for route in EXPECTED_ROUTES:
