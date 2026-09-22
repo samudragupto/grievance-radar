@@ -1,9 +1,10 @@
 # Synthetic grievance dataset generator with intentional municipal spikes.
 
-from datetime import datetime, timedelta
 import json
-from pathlib import Path
 import random
+from datetime import datetime, timedelta
+from pathlib import Path
+
 import pandas as pd
 
 random.seed(42)
@@ -27,22 +28,32 @@ WARDS = [f"Ward {i}" for i in range(1, 13)]
 
 TEMPLATES = {
     "Water Supply": [
-        "No water supply in {ward} since last 3 days. The overhead tank is overflowing but no water reaching houses in lane 3.",
-        "Contaminated drinking water being pumped into our residential area in {ward}. It has bad odor and muddy color.",
-        "Underground pipeline burst near main junction in {ward}. Potable water is flooding the street for 24 hours.",
-        "Extremely low water pressure in {ward}. Even motors cannot lift water to storage tanks on first floor.",
-        "Public water tap broken near community center in {ward}, wasting hundreds of liters daily.",
+        "No water supply in {ward} since last 3 days. The overhead tank is overflowing but "
+        "no water reaching houses in lane 3.",
+        "Contaminated drinking water being pumped into our residential area in {ward}. It "
+        "has bad odor and muddy color.",
+        "Underground pipeline burst near main junction in {ward}. Potable water is flooding "
+        "the street for 24 hours.",
+        "Extremely low water pressure in {ward}. Even motors cannot lift water to storage "
+        "tanks on first floor.",
+        "Public water tap broken near community center in {ward}, wasting hundreds of "
+        "liters daily.",
     ],
     "Sanitation": [
-        "Garbage not collected for 1 week in {ward}. Smell is unbearable and stray animals are scattering waste everywhere.",
-        "Open sewage drain overflowing across the walking street in {ward}. Mosquito breeding hazard.",
-        "Public dustbins overflowing and damaged near market area in {ward}. Need immediate clearing.",
+        "Garbage not collected for 1 week in {ward}. Smell is unbearable and stray animals "
+        "are scattering waste everywhere.",
+        "Open sewage drain overflowing across the walking street in {ward}. Mosquito "
+        "breeding hazard.",
+        "Public dustbins overflowing and damaged near market area in {ward}. Need immediate "
+        "clearing.",
         "Dead animal lying on roadside in {ward} causing severe foul smell and health hazard.",
         "Sanitation workers have not swept the residential colony in {ward} for over two weeks.",
     ],
     "Electrical": [
-        "Frequent power tripping and voltage fluctuation in {ward} damaging household refrigerators and fans.",
-        "Transformer sparking intermittently during evening peak hours in {ward}. Sparks falling near shops.",
+        "Frequent power tripping and voltage fluctuation in {ward} damaging household "
+        "refrigerators and fans.",
+        "Transformer sparking intermittently during evening peak hours in {ward}. Sparks "
+        "falling near shops.",
         "Hanging live electric wire dangerously low across the school lane in {ward}.",
         "Power outage lasting more than 8 hours without prior notice in {ward}.",
         "Electric pole tilted dangerously after storm in {ward}, risk of collapse.",
@@ -50,12 +61,14 @@ TEMPLATES = {
     "Roads": [
         "Deep potholes on main bus route in {ward} causing frequent two-wheeler accidents.",
         "Road dug up for pipeline work in {ward} left unpaved and open for over a month.",
-        "Speed breaker missing near school crossing in {ward} where vehicles overspeed dangerously.",
+        "Speed breaker missing near school crossing in {ward} where vehicles overspeed "
+        "dangerously.",
         "Waterlogging on road after brief rain in {ward} due to lack of storm water gradient.",
         "Tar road completely eroded exposing sharp gravel stones in {ward}.",
     ],
     "Streetlights": [
-        "Street light near primary school has been broken for 2 months in {ward}. Children walk in darkness during winter mornings.",
+        "Street light near primary school has been broken for 2 months in {ward}. Children "
+        "walk in darkness during winter mornings.",
         "All streetlights on lane 4 in {ward} stay on during daytime and switch off at night.",
         "Dark stretch of 500 meters along canal road in {ward} due to non-functional sodium lamps.",
         "New LED street lights flickering continuously causing glare and headache in {ward}.",
@@ -67,7 +80,8 @@ TEMPLATES = {
         "No ceiling fans working in class 5 classroom during summer heat in {ward}.",
     ],
     "Health": [
-        "Primary health center in {ward} has severe shortage of essential fever medicines and ORS packets.",
+        "Primary health center in {ward} has severe shortage of essential fever medicines "
+        "and ORS packets.",
         "Anti-larval fogging not carried out in {ward} despite multiple reported dengue cases.",
         "Ambulance parking blocked by unauthorized vendors near clinic in {ward}.",
     ],
@@ -77,7 +91,8 @@ TEMPLATES = {
     ],
     "Forest": [
         "Overgrown tree branches touching high-tension power lines near house number 45 in {ward}.",
-        "Dry eucalyptus tree leaning towards residential roof in {ward}, requires emergency pruning.",
+        "Dry eucalyptus tree leaning towards residential roof in {ward}, requires emergency "
+        "pruning.",
     ],
 }
 

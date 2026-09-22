@@ -2,7 +2,10 @@
 
 import logging
 from pathlib import Path
-from flask import Blueprint, abort, current_app, render_template, send_file
+
+from flask import Blueprint, abort, render_template, send_file
+
+from app.database import db
 from app.models import Brief, Finding
 
 logger = logging.getLogger(__name__)
@@ -12,7 +15,9 @@ brief_bp = Blueprint("brief", __name__, url_prefix="/brief")
 @brief_bp.route("/preview")
 def preview():
     """Render HTML preview of the Monday Brief using currently confirmed findings."""
-    confirmed_findings = Finding.query.filter_by(status="confirmed").order_by(Finding.z_score.desc()).all()
+    confirmed_findings = (
+        Finding.query.filter_by(status="confirmed").order_by(Finding.z_score.desc()).all()
+    )
     latest_brief = Brief.query.order_by(Brief.generated_at.desc()).first()
 
     return render_template(
@@ -29,7 +34,7 @@ def download(brief_id: int):
     Args:
         brief_id: Primary key ID of the Brief record.
     """
-    brief = Brief.query.get(brief_id)
+    brief = db.session.get(Brief, brief_id)
     if not brief or not brief.pdf_path:
         abort(404, description="Brief not found or PDF path missing.")
 

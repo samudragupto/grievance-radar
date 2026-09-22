@@ -1,12 +1,12 @@
 # Officer dashboard routes for human-in-the-loop decision making.
 
-from datetime import datetime
-import json
 import logging
+from datetime import datetime
+
 from flask import Blueprint, jsonify, render_template, request
+
 from app.database import db
-from app.models import Brief, Cluster, Complaint, Finding, OfficerDecision
-from app.services.brief_generator import generate_brief_pdf
+from app.models import Cluster, Complaint, Finding, OfficerDecision
 
 logger = logging.getLogger(__name__)
 officer_bp = Blueprint("officer", __name__, url_prefix="/officer")
@@ -15,9 +15,15 @@ officer_bp = Blueprint("officer", __name__, url_prefix="/officer")
 @officer_bp.route("/dashboard")
 def dashboard():
     """Render officer decision dashboard showing pending anomaly findings."""
-    pending_findings = Finding.query.filter_by(status="pending").order_by(Finding.z_score.desc()).all()
-    confirmed_findings = Finding.query.filter_by(status="confirmed").order_by(Finding.decided_at.desc()).all()
-    dismissed_findings = Finding.query.filter_by(status="dismissed").order_by(Finding.decided_at.desc()).all()
+    pending_findings = (
+        Finding.query.filter_by(status="pending").order_by(Finding.z_score.desc()).all()
+    )
+    confirmed_findings = (
+        Finding.query.filter_by(status="confirmed").order_by(Finding.decided_at.desc()).all()
+    )
+    dismissed_findings = (
+        Finding.query.filter_by(status="dismissed").order_by(Finding.decided_at.desc()).all()
+    )
 
     total_complaints = Complaint.query.count()
     cluster_count = Cluster.query.count()
@@ -47,7 +53,7 @@ def record_decision():
     if not finding_id or action not in ["confirm", "dismiss", "edit"]:
         return jsonify({"error": "Invalid payload. finding_id and valid action required."}), 400
 
-    finding = Finding.query.get(finding_id)
+    finding = db.session.get(Finding, finding_id)
     if not finding:
         return jsonify({"error": f"Finding with id {finding_id} not found."}), 404
 
@@ -77,11 +83,13 @@ def record_decision():
     db.session.commit()
 
     logger.info("Officer applied '%s' on Finding #%d", action, finding.id)
-    return jsonify({
-        "success": True,
-        "finding": finding.to_dict(),
-        "message": f"Finding #{finding.id} successfully {finding.status}.",
-    })
+    return jsonify(
+        {
+            "success": True,
+            "finding": finding.to_dict(),
+            "message": f"Finding #{finding.id} successfully {finding.status}.",
+        }
+    )
 
 
 @officer_bp.route("/history")

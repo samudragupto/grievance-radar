@@ -3,30 +3,120 @@ name: CD
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
+
+# Never cancel an in-flight deployment; queue behind it instead.
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: grievance-radar
 
 jobs:
-  deploy:
-    name: Production Deployment
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+  ci:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
 
-      # Option A: Deploy to Render (Default active hook)
-      - name: Trigger Render Deploy Hook
+  build:
+    name: Build & smoke-test container image
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha,scope=cd
+          cache-to: type=gha,mode=max,scope=cd
+
+      # Fail the pipeline here rather than after the deploy hook has fired:
+      # Render would otherwise ship an image/start command that never boots.
+      - name: Smoke test container
+        run: |
+          docker run -d --name grievance-radar-smoke \
+            -p 5000:5000 \
+            -e SECRET_KEY=ci-smoke-secret \
+            -e FLASK_ENV=production \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+          for attempt in $(seq 1 40); do
+            if curl -fsS --max-time 5 http://127.0.0.1:5000/health; then
+              echo "container healthy after ${attempt} attempt(s)"
+              docker rm -f grievance-radar-smoke
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "::error::container did not become healthy"
+          docker logs grievance-radar-smoke
+          exit 1
+
+      - name: Collect container logs on failure
+        if: failure()
+        run: docker logs grievance-radar-smoke || true
+
+      - name: Clean up smoke container
+        if: always()
+        run: docker rm -f grievance-radar-smoke || true
+
+  deploy:
+    name: Deploy to Render
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Optional: enable required reviewers / wait timers in repo settings under
+    # Settings -> Environments -> production.
+    environment: production
+    env:
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Trigger Render deploy hook
         if: env.RENDER_DEPLOY_HOOK != ''
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           echo "Triggering automated build and deploy on Render..."
-          curl -s -X POST "$RENDER_DEPLOY_HOOK"
+          curl -fsS --retry 5 --retry-delay 10 --retry-all-errors --max-time 60 \
+            -X POST "$RENDER_DEPLOY_HOOK"
 
-      # Option B: Deploy to PythonAnywhere (Alternative option)
-      # - name: Deploy to PythonAnywhere
-      #   env:
-      #     PA_USERNAME: ${{ secrets.PYTHONANYWHERE_USERNAME }}
-      #     PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
-      #     PA_DOMAIN: ${{ secrets.PYTHONANYWHERE_DOMAIN }}
-      #   run: |
-      #     curl -X POST "https://www.pythonanywhere.com/api/v0/user/${PA_USERNAME}/webapps/${PA_DOMAIN}/reload/" \
-      #       -H "Authorization: Token ${PA_API_TOKEN}"
+      # A missing secret used to leave the job silently green, which made the
+      # pipeline look healthy while nothing was ever deployed.
+      - name: Report skipped deployment
+        if: env.RENDER_DEPLOY_HOOK == ''
+        run: |
+          echo "::warning::RENDER_DEPLOY_HOOK is not configured - no deployment was triggered."
+          echo "Add the hook under Settings -> Secrets and variables -> Actions to enable deploys."
+
+  # Alternative target, left wired up but disabled. Flip the `if` and fill in
+  # PYTHONANYWHERE_USERNAME / PYTHONANYWHERE_API_TOKEN / PYTHONANYWHERE_DOMAIN
+  # secrets to switch providers.
+  deploy_pythonanywhere:
+    name: Deploy to PythonAnywhere
+    needs: build
+    if: false
+    runs-on: ubuntu-latest
+    env:
+      PA_USERNAME: ${{ secrets.PYTHONANYWHERE_USERNAME }}
+      PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
+      PA_DOMAIN: ${{ secrets.PYTHONANYWHERE_DOMAIN }}
+    steps:
+      - name: Reload web app
+        run: |
+          curl -fsS --retry 5 --retry-delay 10 --max-time 60 -X POST \
+            "https://www.pythonanywhere.com/api/v0/user/${PA_USERNAME}/webapps/${PA_DOMAIN}/reload/" \
+            -H "Authorization: Token ${PA_API_TOKEN}"

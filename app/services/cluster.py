@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any, Dict, List
+
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -158,6 +159,8 @@ def cluster_complaints(
                 "clusters": cluster_meta,
             }
         except Exception as e:
-            logger.warning("BERTopic unavailable or encountered error: %s. Falling back to K-Means.", e)
+            logger.warning(
+                "BERTopic unavailable or encountered error: %s. Falling back to K-Means.", e
+            )
 
     return _kmeans_clustering(embeddings, texts)

@@ -1,12 +1,14 @@
 # Unit tests for text cleaning and PII redaction.
 
-import pytest
 from app.services.preprocess import preprocess_text
 
 
 def test_preprocess_removes_emails():
     """Verify email addresses are properly redacted with [EMAIL]."""
-    text = "Please reach out to official.user@citygov.in or contact@ward4.org regarding the broken pipe."
+    text = (
+        "Please reach out to official.user@citygov.in or contact@ward4.org "
+        "regarding the broken pipe."
+    )
     cleaned = preprocess_text(text)
     assert "[EMAIL]" in cleaned
     assert "official.user@citygov.in" not in cleaned

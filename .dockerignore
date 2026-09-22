@@ -1,0 +1,26 @@
+# Keep the image lean and the build cache stable: tests, tooling and local
+# runtime artifacts are not needed to serve the app.
+.git
+.github
+.gitignore
+.venv
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+coverage.xml
+.coverage
+instance/
+tests/
+docs/
+.env
+.env.*
+!.env.example
+*.md
+!README.md
+Dockerfile
+docker-compose.yml

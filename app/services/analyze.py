@@ -1,8 +1,8 @@
 # Statistical analysis, rolling baseline calculation, and Z-score spike detection.
 
-from datetime import datetime, timedelta
 import logging
 from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
 
@@ -45,19 +45,16 @@ def compute_rolling_baseline(
     baseline_stats: Dict[str, Dict[str, float]] = {}
 
     # Weekly count by group
-    grouped = (
-        baseline_df.groupby(["cluster_id", "ward", "week"])
-        .size()
-        .reset_index(name="count")
-    )
+    grouped = baseline_df.groupby(["cluster_id", "ward", "week"]).size().reset_index(name="count")
 
     for (c_id, ward), group in grouped.groupby(["cluster_id", "ward"]):
         counts = group["count"].values
-        # Pad with zeros if fewer historical weeks recorded than window
-        if len(counts) < window_weeks:
-            counts = np.pad(counts, (window_weeks - len(counts), 0), "constant")
-        else:
-            counts = counts[-window_weeks:]
+        # Use at most the most recent `window_weeks` weeks that actually have
+        # data. Weeks with no complaints at all are *not* synthesized as zeros:
+        # doing so drags the mean down and inflates the standard deviation,
+        # which produces false-positive spikes for wards that simply report
+        # intermittently rather than genuinely surging.
+        counts = counts[-window_weeks:]
 
         mean = float(np.mean(counts))
         std = float(np.std(counts, ddof=1)) if len(counts) > 1 else 0.0
@@ -127,7 +124,7 @@ def detect_spikes(
 
         if z >= z_thresh and pct_change >= pct_thresh:
             cluster_name = cluster_labels.get(c_id, f"Grievance Cluster {c_id}")
-            title = f"{dept} surge in {ward} (+{int(pct_change)}%, z={round(z, 1)})"
+            title = f"{cluster_name}: {dept} surge in {ward} (+{int(pct_change)}%, z={round(z, 1)})"
 
             severity_score = float(z * cur_count)
 
@@ -160,4 +157,7 @@ def rank_findings(spikes: List[Dict[str, Any]], top_n: int = 3) -> List[Dict[str
     Returns:
         Ranked sublist containing at most top_n findings.
     """
-    return spikes[:top_n]
+    # `detect_spikes` already sorts by severity, but callers may hand us an
+    # unsorted list (e.g. restored from the database), so sort defensively
+    # instead of assuming the input order is meaningful.
+    return sorted(spikes, key=lambda s: s.get("severity_score", 0.0), reverse=True)[:top_n]

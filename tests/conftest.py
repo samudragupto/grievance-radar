@@ -1,21 +1,30 @@
-# Test configuration and fixtures.
+# Shared pytest fixtures for the Grievance Radar test suite.
 
-from datetime import datetime
 import json
 from pathlib import Path
+
 import pytest
+
 from app import create_app
 from app.database import db as _db
-from app.models import Complaint
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def app():
-    """Create Flask application fixture configured for testing."""
+    """Create a Flask application with a fresh schema for every test.
+
+    The fixture is function-scoped so that each test gets its own in-memory
+    SQLite database. Previously the app fixture was session-scoped while the
+    ``db`` fixture dropped every table after each test, which meant any test
+    that did not request ``db`` (e.g. the pure route smoke tests) ran against a
+    database whose tables had already been dropped and failed with
+    ``OperationalError: no such table``.
+    """
     test_app = create_app("testing")
     with test_app.app_context():
         _db.create_all()
         yield test_app
+        _db.session.remove()
         _db.drop_all()
 
 
@@ -27,12 +36,16 @@ def client(app):
 
 @pytest.fixture(scope="function")
 def db(app):
-    """Provide database session rollback after each test."""
+    """Provide the database session, rolling back state after each test."""
     with app.app_context():
-        _db.create_all()
         yield _db
         _db.session.remove()
-        _db.drop_all()
+
+
+@pytest.fixture(scope="function")
+def db_session(db):
+    """Convenience alias for tests that only need the SQLAlchemy session."""
+    return db.session
 
 
 @pytest.fixture

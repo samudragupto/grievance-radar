@@ -1,75 +1,121 @@
 name: CI
 
 on:
-  push:
-    branches: ["**"]
+  # PRs into main are the quality gate.
   pull_request:
     branches: ["main"]
+  # `workflow_call` lets CD run this workflow as a pre-deploy gate, so main is
+  # still verified on every push without paying for a duplicate CI run.
+  workflow_call:
+  workflow_dispatch:
+
+# Cancel superseded runs for the same branch instead of burning runner minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: nothing in this workflow needs write access.
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_INPUT: "1"
+  EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
 
 jobs:
   lint:
     name: Lint & Code Style
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: requirements-lint.txt
 
-      - name: Install Linting Tools
+      - name: Install lint tooling
         run: |
           python -m pip install --upgrade pip
-          pip install black flake8 isort
+          pip install -r requirements-lint.txt
 
-      - name: Check Code Formatting (Black)
-        run: black --check .
+      - name: Check code formatting (black)
+        run: black --check --diff .
 
-      - name: Check Import Order (isort)
-        run: isort --check .
+      - name: Check import order (isort)
+        run: isort --check-only --diff .
 
-      - name: Lint with Flake8
+      - name: Lint with flake8
         run: flake8 app/ tests/ scripts/
 
   test:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: requirements-dev.txt
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Cache Sentence Transformers Model
-        uses: actions/cache@v4
+      # Keyed on the requirements hash so a dependency bump invalidates the
+      # cached model instead of reusing a stale one forever.
+      - name: Cache sentence-transformers model
         id: cache-st-model
+        uses: actions/cache@v5
         with:
-          path: ~/.cache/huggingface/hub
-          key: ${{ runner.os }}-st-model-all-MiniLM-L6-v2
+          path: ~/.cache/huggingface
+          key: st-model-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.EMBEDDING_MODEL }}-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            st-model-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ env.EMBEDDING_MODEL }}-
 
-      - name: Pre-download Embedding Model
+      - name: Pre-download embedding model
         if: steps.cache-st-model.outputs.cache-hit != 'true'
         run: |
-          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+          python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL}')"
 
-      - name: Run Pytest Suite with Coverage
+      - name: Report embedding backend
+        run: |
+          python - <<'PY'
+          from app.services.embed import get_embedding_model
+
+          model = get_embedding_model()
+          if model is None:
+              print(
+                  "::warning::sentence-transformers model could not be loaded; "
+                  "tests will run against the deterministic fallback encoder."
+              )
+          else:
+              print(f"Embedding model loaded: {model}")
+          PY
+
+      - name: Run pytest suite with coverage
         run: |
           pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
 
-      - name: Upload Coverage Artifact
-        uses: actions/upload-artifact@v4
+      - name: Smoke test the WSGI app
+        run: python scripts/smoke_test.py
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v5
         with:
-          name: coverage-report
+          name: coverage-report-py${{ env.PYTHON_VERSION }}
           path: coverage.xml
+          if-no-files-found: warn

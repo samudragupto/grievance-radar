@@ -2,9 +2,11 @@
 
 import logging
 import os
+
 from flask import Flask
+
 from app.config import config_by_name
-from app.database import db, init_db
+from app.database import init_db
 
 
 def create_app(config_name: str = None) -> Flask:

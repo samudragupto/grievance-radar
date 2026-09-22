@@ -1,8 +1,9 @@
 # Route and view tests for web interface.
 
 import json
-import pytest
-from app.models import Finding
+from datetime import datetime
+
+from app.models import Complaint, Finding
 
 
 def test_get_index(client):
@@ -60,3 +61,29 @@ def test_post_officer_decision_invalid_id(client):
         json={"finding_id": 999999, "action": "confirm"},
     )
     assert response.status_code == 404
+
+
+def test_health_endpoint_reports_ok(client):
+    """Verify /health returns 200 and is safe for use as a deploy probe."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert "complaints" in data
+
+
+def test_health_endpoint_leaks_no_complaint_text(client, app, db):
+    """Verify the health probe never serializes raw complaint content."""
+    with app.app_context():
+        db.session.add(
+            Complaint(
+                text="Sensitive citizen grievance text",
+                ward="Ward 1",
+                department="Sanitation",
+                filed_date=datetime(2026, 3, 5).date(),
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/health")
+    assert "Sensitive citizen grievance text" not in response.get_data(as_text=True)

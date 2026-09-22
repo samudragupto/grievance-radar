@@ -1,15 +1,14 @@
 # PDF generation service for the 1-page Monday Brief using ReportLab.
 
-from datetime import datetime
 import logging
-import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +119,9 @@ def generate_brief_pdf(
         f"<b>Human-Confirmed Findings Only</b> | Date: {datetime.utcnow().strftime('%B %d, %Y')}"
     )
     story.append(Paragraph(meta_line, subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=primary_color, spaceBefore=2, spaceAfter=14))
+    story.append(
+        HRFlowable(width="100%", thickness=1.5, color=primary_color, spaceBefore=2, spaceAfter=14)
+    )
 
     # Findings loop (max 3 to guarantee strictly 1-page layout)
     findings_to_render = confirmed_findings[:3]
@@ -129,14 +130,20 @@ def generate_brief_pdf(
         story.append(Spacer(1, 20))
         story.append(
             Paragraph(
-                "<i>No critical spikes were confirmed by the municipal officer for this period. All anomalies within expected operating limits.</i>",
+                "<i>No critical spikes were confirmed by the municipal officer for this "
+                "period. All anomalies within expected operating limits.</i>",
                 styles["Normal"],
             )
         )
     else:
         for idx, finding in enumerate(findings_to_render, start=1):
-            severity_marker = "[CRITICAL SURGE]" if finding.get("z_score", 0) > 3.0 else "[ELEVATED]"
-            title_text = f"<b>#{idx}. {finding.get('title', 'Grievance Surge')}</b> &nbsp;&nbsp;<font color='{alert_red}'>{severity_marker}</font>"
+            severity_marker = (
+                "[CRITICAL SURGE]" if finding.get("z_score", 0) > 3.0 else "[ELEVATED]"
+            )
+            title_text = (
+                f"<b>#{idx}. {finding.get('title', 'Grievance Surge')}</b> "
+                f"&nbsp;&nbsp;<font color='{alert_red}'>{severity_marker}</font>"
+            )
             story.append(Paragraph(title_text, finding_title_style))
 
             z_score = finding.get("z_score", 0.0)
@@ -152,7 +159,10 @@ def generate_brief_pdf(
             )
             story.append(Paragraph(stats_text, bullet_style))
 
-            scope_text = f"• <b>Affected Locations:</b> {wards} | <b>Recommended Action Department:</b> <u>{dept}</u>"
+            scope_text = (
+                f"• <b>Affected Locations:</b> {wards} | "
+                f"<b>Recommended Action Department:</b> <u>{dept}</u>"
+            )
             story.append(Paragraph(scope_text, bullet_style))
 
             samples = finding.get("sample_texts", [])
@@ -163,15 +173,26 @@ def generate_brief_pdf(
 
             story.append(Spacer(1, 10))
             if idx < len(findings_to_render):
-                story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#e0e0e0"), spaceBefore=4, spaceAfter=10))
+                story.append(
+                    HRFlowable(
+                        width="100%",
+                        thickness=0.5,
+                        color=colors.HexColor("#e0e0e0"),
+                        spaceBefore=4,
+                        spaceAfter=10,
+                    )
+                )
 
     # Footer section
     story.append(Spacer(1, 20))
-    story.append(HRFlowable(width="100%", thickness=1, color=primary_color, spaceBefore=8, spaceAfter=8))
+    story.append(
+        HRFlowable(width="100%", thickness=1, color=primary_color, spaceBefore=8, spaceAfter=8)
+    )
     footer_text = (
         "Grievance Radar | One officer, one page, every week.<br/>"
         "SRM Institute of Science & Technology, Tiruchirappalli | YUVA Megathon 2026<br/>"
-        f"Generated at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')} • Tamper-evident Audit ID: GR-{int(datetime.utcnow().timestamp())}"
+        f"Generated at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')} • "
+        f"Tamper-evident Audit ID: GR-{int(datetime.utcnow().timestamp())}"
     )
     story.append(Paragraph(footer_text, footer_style))
 
